@@ -2,8 +2,9 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>3D Space Experience for Lerochka</title>
+    <meta name="theme-color" content="#020208">
     
     <script src="https://cdn.tailwindcss.com"></script>
     
@@ -20,22 +21,45 @@
         ::-webkit-scrollbar { width: 6px; }
         ::-webkit-scrollbar-track { background: rgba(2, 2, 8, 0.8); }
         ::-webkit-scrollbar-thumb { background: rgba(255, 42, 95, 0.4); border-radius: 3px; }
+        * { -webkit-tap-highlight-color: transparent; }
         body, html {
             margin: 0; padding: 0; width: 100%; height: 100%;
             overflow: hidden; background-color: #020208;
             font-family: 'Montserrat', sans-serif; user-select: none;
+            overscroll-behavior: none;
         }
         .font-cursive { font-family: 'Great Vibes', cursive; }
         .font-serif-custom { font-family: 'Cinzel Decorative', serif; }
         .neon-text-pink {
-            text-shadow: 0 0 10px rgba(255, 42, 95, 0.8), 0 0 25px rgba(255, 42, 95, 0.6), 0 0 40px rgba(255, 42, 95, 0.4);
+            text-shadow: 0 0 10px rgba(255, 42, 95, 0.9), 0 0 25px rgba(255, 42, 95, 0.7), 0 0 40px rgba(255, 42, 95, 0.5);
+        }
+        .neon-text-white {
+            text-shadow: 0 0 10px rgba(255, 255, 255, 0.9), 0 0 25px rgba(255, 255, 255, 0.5);
         }
         @keyframes pulseDotAura {
-            0% { transform: scale(1); opacity: 0.8; box-shadow: 0 0 15px #ff2a5f; }
-            50% { transform: scale(1.3); opacity: 1; box-shadow: 0 0 30px #ff2a5f, 0 0 50px #ff2a5f; }
-            100% { transform: scale(1); opacity: 0.8; box-shadow: 0 0 15px #ff2a5f; }
+            0% { transform: scale(1); opacity: 0.8; box-shadow: 0 0 15px #ff2a5f, 0 0 30px #ff2a5f; }
+            50% { transform: scale(1.4); opacity: 1; box-shadow: 0 0 40px #ff2a5f, 0 0 80px #ff2a5f; }
+            100% { transform: scale(1); opacity: 0.8; box-shadow: 0 0 15px #ff2a5f, 0 0 30px #ff2a5f; }
+        }
+        @keyframes floatUp {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-8px); }
+        }
+        @keyframes shimmer {
+            0% { background-position: -200% center; }
+            100% { background-position: 200% center; }
+        }
+        @keyframes fadeInScale {
+            from { opacity: 0; transform: scale(0.9); }
+            to { opacity: 1; transform: scale(1); }
+        }
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
         }
         .pulsating-star-dot { animation: pulseDotAura 2s infinite ease-in-out; }
+        .floating { animation: floatUp 4s ease-in-out infinite; }
+        
         .glass-panel {
             background: rgba(10, 10, 20, 0.65);
             backdrop-filter: blur(16px);
@@ -47,7 +71,7 @@
             backdrop-filter: blur(20px);
             -webkit-backdrop-filter: blur(20px);
             border: 1px solid rgba(255, 42, 95, 0.3);
-            box-shadow: 0 0 30px rgba(255, 42, 95, 0.15);
+            box-shadow: 0 0 30px rgba(255, 42, 95, 0.15), inset 0 0 20px rgba(255, 42, 95, 0.05);
         }
         #explosion-canvas {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
@@ -62,33 +86,136 @@
         }
         #intro-overlay { cursor: pointer; }
         #debug-error {
-            position: fixed;
-            bottom: 0; left: 0; right: 0;
-            background: #7f1d1d;
-            color: white;
-            padding: 10px;
-            font-family: monospace;
-            font-size: 12px;
-            z-index: 9999;
-            display: none;
-            white-space: pre-wrap;
+            position: fixed; bottom: 0; left: 0; right: 0;
+            background: #7f1d1d; color: white; padding: 10px;
+            font-family: monospace; font-size: 12px;
+            z-index: 9999; display: none; white-space: pre-wrap;
+        }
+        
+        .modal-transition {
+            transition: opacity 0.4s ease, transform 0.4s ease;
+        }
+        .modal-hidden {
+            opacity: 0;
+            pointer-events: none;
+            transform: scale(0.95);
+        }
+        
+        #preloader {
+            position: fixed; inset: 0; z-index: 100;
+            background: radial-gradient(circle at center, #1a0a15 0%, #020208 70%);
+            display: flex; flex-direction: column;
+            align-items: center; justify-content: center;
+            transition: opacity 1s ease;
+        }
+        .loader-ring {
+            width: 80px; height: 80px;
+            border-radius: 50%;
+            border: 3px solid rgba(255, 42, 95, 0.2);
+            border-top-color: #ff2a5f;
+            animation: spin 1s linear infinite;
+            margin-bottom: 20px;
+            box-shadow: 0 0 30px rgba(255, 42, 95, 0.5);
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .loader-text {
+            color: #ff2a5f;
+            font-size: 14px;
+            letter-spacing: 3px;
+            text-transform: uppercase;
+            animation: shimmer 2s infinite linear;
+            background: linear-gradient(90deg, #ff2a5f, #ffaacc, #ff2a5f);
+            background-size: 200% auto;
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        
+        #lightbox-img {
+            box-shadow: 0 0 60px rgba(255, 42, 95, 0.4), 0 0 100px rgba(255, 42, 95, 0.2);
+            animation: fadeInScale 0.4s ease;
+        }
+        
+        .glass-panel:hover {
+            border-color: rgba(255, 42, 95, 0.5);
+            box-shadow: 0 0 20px rgba(255, 42, 95, 0.2);
+        }
+        
+        /* Лайтбокс кнопки */
+        .lb-btn {
+            width: 50px; height: 50px;
+            border-radius: 50%;
+            background: rgba(255, 42, 95, 0.15);
+            border: 1px solid rgba(255, 42, 95, 0.4);
+            display: flex; align-items: center; justify-content: center;
+            color: white; font-size: 20px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            backdrop-filter: blur(10px);
+        }
+        .lb-btn:hover {
+            background: rgba(255, 42, 95, 0.4);
+            transform: scale(1.1);
+            box-shadow: 0 0 25px rgba(255, 42, 95, 0.6);
+        }
+        .lb-btn:active { transform: scale(0.95); }
+        
+        #lightbox-caption {
+            animation: fadeInUp 0.5s ease 0.2s both;
+        }
+        
+        /* Миниатюры-навигация внизу лайтбокса */
+        #lb-thumbs {
+            scrollbar-width: thin;
+            scrollbar-color: rgba(255, 42, 95, 0.5) transparent;
+        }
+        #lb-thumbs::-webkit-scrollbar { height: 4px; }
+        #lb-thumbs::-webkit-scrollbar-thumb { background: rgba(255, 42, 95, 0.5); border-radius: 2px; }
+        .lb-thumb {
+            width: 50px; height: 50px;
+            border-radius: 6px;
+            object-fit: cover;
+            cursor: pointer;
+            border: 2px solid transparent;
+            opacity: 0.5;
+            transition: all 0.3s ease;
+            flex-shrink: 0;
+        }
+        .lb-thumb:hover { opacity: 1; transform: scale(1.08); }
+        .lb-thumb.active {
+            opacity: 1;
+            border-color: #ff2a5f;
+            box-shadow: 0 0 15px rgba(255, 42, 95, 0.7);
+        }
+        
+        @media (max-width: 640px) {
+            #main-ui { padding: 12px !important; }
+            #main-ui h2 { font-size: 18px !important; }
+            #settings-drawer { width: 100% !important; }
+            .text-5xl { font-size: 3rem !important; }
+            .text-7xl { font-size: 3.5rem !important; }
+            .lb-btn { width: 42px; height: 42px; font-size: 16px; }
         }
     </style>
 </head>
 <body class="text-white relative">
 
+    <div id="preloader">
+        <div class="loader-ring"></div>
+        <div class="loader-text">Загрузка вселенной...</div>
+    </div>
+
     <canvas id="canvas3d" class="absolute inset-0 z-0 outline-none cursor-grab active:cursor-grabbing"></canvas>
     <canvas id="explosion-canvas"></canvas>
 
-    <!-- ФОНОВАЯ МУЗЫКА (громко, 100%) -->
     <audio id="bg-music" loop preload="auto">
-       <source src="fon.mp3" type="audio/mpeg">
+        <source src="fon.mp3" type="audio/mpeg">
     </audio>
 
     <div id="intro-overlay" class="absolute inset-0 z-50 flex flex-col items-center justify-center bg-black/90 transition-opacity duration-1000 p-4">
         <div class="text-center max-w-xl">
-            <h1 class="text-5xl md:text-7xl font-cursive text-pink-400 mb-2 neon-text-pink">Лерочка</h1>
-            <h2 class="text-2xl md:text-4xl font-serif-custom text-white mb-6 tracking-widest opacity-90">
+            <h1 class="text-5xl md:text-7xl font-cursive text-pink-400 mb-2 neon-text-pink floating">Лерочка</h1>
+            <h2 class="text-2xl md:text-4xl font-serif-custom text-white mb-6 tracking-widest opacity-90 neon-text-white">
                 For your wonderful mood, cutie.
             </h2>
             <p class="text-gray-300 text-sm md:text-base mb-10 font-light tracking-wide leading-relaxed">
@@ -107,43 +234,46 @@
     <div id="main-ui" class="absolute inset-0 z-10 pointer-events-none flex flex-col justify-between p-6 opacity-0 transition-opacity duration-1000">
         <div class="flex justify-between items-start pointer-events-auto">
             <div>
-                <h2 class="text-2xl font-cursive text-pink-400">Лерочка</h2>
-                <p class="text-xs text-gray-400">Летай мышкой/пальцем вокруг шара и нажимай на фото</p>
+                <h2 class="text-2xl font-cursive text-pink-400 neon-text-pink">Лерочка</h2>
+                <p class="text-xs text-gray-400">Летай мышкой/пальцем и нажимай на фото</p>
             </div>
-            <div class="flex items-center space-x-4">
-                <button id="toggle-bg-btn" class="glass-panel p-3 rounded-full hover:border-pink-500/50 transition-all text-pink-400" title="Фоновая музыка">
+            <div class="flex items-center space-x-2 md:space-x-4">
+                <button id="open-slideshow-btn" class="glass-panel p-3 rounded-full transition-all text-pink-400" title="Смотреть все фото">
+                    <i class="fas fa-expand text-lg"></i>
+                </button>
+                <button id="toggle-bg-btn" class="glass-panel p-3 rounded-full transition-all text-pink-400" title="Фоновая музыка">
                     <i class="fas fa-volume-high text-lg"></i>
                 </button>
-                <button id="toggle-audio-btn" class="glass-panel p-3 rounded-full hover:border-pink-500/50 transition-all text-pink-400" title="Спецтрек">
+                <button id="toggle-audio-btn" class="glass-panel p-3 rounded-full transition-all text-pink-400" title="Спецтрек">
                     <i class="fas fa-music text-lg"></i>
                 </button>
-                <button id="open-gallery-btn" class="glass-panel px-4 py-2 rounded-full hover:border-pink-500/50 transition-all text-sm flex items-center space-x-2">
+                <button id="open-gallery-btn" class="glass-panel px-3 md:px-4 py-2 rounded-full transition-all text-sm flex items-center space-x-2">
                     <i class="fas fa-images"></i>
-                    <span>Галерея</span>
+                    <span class="hidden md:inline">Галерея</span>
                 </button>
             </div>
         </div>
         <div class="flex justify-center pointer-events-auto mb-4">
-            <button id="focus-core-btn" class="glass-panel px-6 py-2.5 rounded-full hover:border-pink-500/50 transition-all text-sm tracking-wider uppercase text-gray-300 hover:text-white flex items-center space-x-2">
+            <button id="focus-core-btn" class="glass-panel px-6 py-2.5 rounded-full transition-all text-sm tracking-wider uppercase text-gray-300 hover:text-white flex items-center space-x-2">
                 <i class="fas fa-crosshairs text-pink-500"></i>
                 <span>Приблизиться к ядру</span>
             </button>
         </div>
     </div>
 
-    <div id="core-modal" class="absolute inset-0 z-30 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm opacity-0 pointer-events-none transition-opacity duration-500">
+    <div id="core-modal" class="absolute inset-0 z-30 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm modal-transition modal-hidden">
         <div class="glass-panel-glow max-w-md w-full rounded-2xl p-6 relative pointer-events-auto">
-            <button id="close-modal-btn" class="absolute top-4 right-4 text-gray-400 hover:text-white text-xl">
+            <button id="close-modal-btn" class="absolute top-4 right-4 text-gray-400 hover:text-white text-xl transition-colors">
                 <i class="fas fa-times"></i>
             </button>
             <div class="text-center mb-6">
                 <span class="text-xs uppercase tracking-widest text-pink-400 font-semibold">Аудиоплеер</span>
-                <h3 class="text-xl font-semibold mt-1">Особый трек для тебя</h3>
+                <h3 class="text-xl font-semibold mt-1 neon-text-pink">Особый трек для тебя</h3>
                 <p class="text-xs text-gray-400 mt-1">Красивая, этот трек создан для тебя</p>
             </div>
             <canvas id="audio-visualizer" class="w-full h-20 mb-6 rounded-lg bg-black/40"></canvas>
             <div class="flex flex-col items-center space-y-4">
-                <button id="play-pause-btn" class="w-14 h-14 rounded-full bg-pink-600 hover:bg-pink-500 flex items-center justify-center text-white text-xl shadow-lg shadow-pink-600/40 transition-all">
+                <button id="play-pause-btn" class="w-14 h-14 rounded-full bg-pink-600 hover:bg-pink-500 flex items-center justify-center text-white text-xl shadow-lg shadow-pink-600/50 transition-all hover:scale-110">
                     <i class="fas fa-play ml-1"></i>
                 </button>
                 <div class="w-full flex items-center space-x-3 text-xs text-gray-400">
@@ -157,27 +287,55 @@
 
     <div id="settings-drawer" class="absolute top-0 right-0 bottom-0 w-80 z-30 glass-panel border-l border-white/10 transform translate-x-full transition-transform duration-300 p-6 overflow-y-auto pointer-events-auto">
         <div class="flex justify-between items-center mb-6">
-            <h3 class="text-lg font-semibold">Галерея фотографий</h3>
-            <button id="close-drawer-btn" class="text-gray-400 hover:text-white">
+            <h3 class="text-lg font-semibold neon-text-pink">Галерея фотографий</h3>
+            <button id="close-drawer-btn" class="text-gray-400 hover:text-white text-xl transition-colors">
                 <i class="fas fa-times"></i>
             </button>
         </div>
         <div class="space-y-4">
             <p class="text-xs text-gray-400">Замени ссылки на свои фото:</p>
             <div id="photo-inputs-container" class="space-y-3"></div>
-            <button id="save-photos-btn" class="w-full py-2 bg-pink-600 hover:bg-pink-500 rounded-lg text-sm font-semibold transition-colors mt-4">
+            <button id="save-photos-btn" class="w-full py-2 bg-pink-600 hover:bg-pink-500 rounded-lg text-sm font-semibold transition-all hover:scale-105">
                 Сохранить и обновить
             </button>
         </div>
     </div>
 
-    <div id="photo-lightbox" class="absolute inset-0 z-40 bg-black/90 flex items-center justify-center p-4 opacity-0 pointer-events-none transition-opacity duration-300">
-        <div class="max-w-2xl w-full text-center relative pointer-events-auto">
-            <button id="close-lightbox-btn" class="absolute -top-10 right-0 text-white text-2xl">
-                <i class="fas fa-times"></i>
-            </button>
-            <img id="lightbox-img" src="" alt="" class="max-h-[75vh] mx-auto rounded-lg shadow-2xl border border-pink-500/30 mb-4 object-contain">
-            <p id="lightbox-caption" class="text-2xl font-cursive text-pink-300"></p>
+    <!-- ═══════════ ЛАЙТБОКС / СЛАЙДШОУ ═══════════ -->
+    <div id="photo-lightbox" class="absolute inset-0 z-[45] bg-black/95 flex flex-col items-center justify-center p-3 md:p-6 modal-transition modal-hidden">
+        
+        <!-- Кнопка закрытия -->
+        <button id="close-lightbox-btn" class="absolute top-4 right-4 lb-btn z-10" title="Закрыть (Esc)">
+            <i class="fas fa-times"></i>
+        </button>
+
+        <!-- Счётчик -->
+        <div id="lb-counter" class="absolute top-6 left-6 text-sm md:text-base text-pink-300/80 font-mono tracking-widest">
+            1 / 11
+        </div>
+
+        <!-- Стрелка влево -->
+        <button id="lb-prev" class="absolute left-3 md:left-8 top-1/2 -translate-y-1/2 lb-btn z-10" title="Предыдущая (←)">
+            <i class="fas fa-chevron-left"></i>
+        </button>
+
+        <!-- Стрелка вправо -->
+        <button id="lb-next" class="absolute right-3 md:right-8 top-1/2 -translate-y-1/2 lb-btn z-10" title="Следующая (→)">
+            <i class="fas fa-chevron-right"></i>
+        </button>
+
+        <!-- Изображение и подпись -->
+        <div class="flex flex-col items-center justify-center max-w-5xl w-full pointer-events-auto">
+            <img id="lightbox-img" src="" alt="" class="max-h-[65vh] md:max-h-[70vh] max-w-full rounded-xl border border-pink-500/30 object-contain">
+            <div class="mt-5 text-center px-4">
+                <p id="lightbox-caption" class="text-3xl md:text-4xl font-cursive text-pink-300 neon-text-pink"></p>
+                <p id="lightbox-subcaption" class="text-xs md:text-sm text-gray-400 mt-2 tracking-widest uppercase"></p>
+            </div>
+        </div>
+
+        <!-- Миниатюры-навигация -->
+        <div id="lb-thumbs" class="absolute bottom-4 left-0 right-0 flex justify-center gap-2 px-4 overflow-x-auto pointer-events-auto">
+            <!-- заполняется динамически -->
         </div>
     </div>
 
@@ -193,21 +351,22 @@
             return false;
         };
 
-        // ================== ФОТО И МУЗЫКА ==================
-        const BG_MUSIC_SRC = 'fon.mp3';        // фоновый трек
-        const SPECIAL_MUSIC_SRC = 'Lera.mp3';  // спецтрек для неё
+        // ================== НАСТРОЙКИ ==================
+        const BG_MUSIC_SRC = 'fon.mp3';
+        const SPECIAL_MUSIC_SRC = 'Lera.mp3';
 
         const DEFAULT_PHOTOS = [
-            { url: '1.jpg',  caption: 'Красивая' },
-            { url: '2.jpg',  caption: 'Твоя улыбка' },
-            { url: '3.jpg',  caption: 'Яркие моменты' },
-            { url: '4.jpg',  caption: 'Нежность' },
-            { url: '5.jpg',  caption: 'Прекрасный день' },
-            { url: '6.jpg',  caption: 'Особенная атмосфера' },
-            { url: '7.jpg',  caption: 'Вдохновение' },
-            { url: '8.jpg',  caption: 'Сияние' },
-            { url: '9.jpg',  caption: 'Светлые воспоминания' },
-            { url: '10.jpg', caption: 'Для тебя, Лерочка' }
+            { url: '1.jpg',  caption: 'Красивая',              sub: 'Самая лучшая' },
+            { url: '2.jpg',  caption: 'Твоя улыбка',            sub: 'Согревает' },
+            { url: '3.jpg',  caption: 'Яркие моменты',          sub: 'Незабываемые' },
+            { url: '4.jpg',  caption: 'Нежность',               sub: 'В каждом взгляде' },
+            { url: '5.jpg',  caption: 'Прекрасный день',        sub: 'С тобой' },
+            { url: '6.jpg',  caption: 'Особенная атмосфера',    sub: 'Только наша' },
+            { url: '7.jpg',  caption: 'Вдохновение',            sub: 'Ты моя муза' },
+            { url: '8.jpg',  caption: 'Сияние',                 sub: 'Как звезда' },
+            { url: '9.jpg',  caption: 'Светлые воспоминания',   sub: 'Навсегда в сердце' },
+            { url: '10.jpg', caption: 'Для тебя, Лерочка',      sub: 'С любовью' },
+            { url: '11.jpg', caption: 'Мой мир',                sub: 'Это ты' }
         ];
 
         let customPhotos;
@@ -219,7 +378,7 @@
 
         let scene, camera, renderer;
         let redSphereMesh, saturnRingMesh, starfieldMesh;
-        let photoCardsGroup, floatingTextsGroup;
+        let photoCardsGroup, floatingTextsGroup, cometsGroup;
         let raycaster = new THREE.Raycaster();
         let mouse = new THREE.Vector2();
 
@@ -230,15 +389,21 @@
         let camRadius = 50;
         let camTargetTheta = camTheta, camTargetPhi = camPhi, camTargetRadius = camRadius;
 
+        let starLayers = [];
+        let mouseNormX = 0, mouseNormY = 0;
+        let comets = [];
+
         let audioCtx, audioAnalyser, audioSource;
         let isAudioPlaying = false;
-
         let bgMusicEl;
         let bgMuted = false;
-        let specialAudioEl = null; // ссылка на спецтрек, чтобы управлять им извне
-
         let experienceStarted = false;
 
+        // Лайтбокс
+        let currentLbIndex = 0;
+        let isLightboxOpen = false;
+
+        // ═══════════════ 3D SCENE ═══════════════
         function init3DScene() {
             const container = document.getElementById('canvas3d');
             scene = new THREE.Scene();
@@ -258,14 +423,17 @@
 
             photoCardsGroup = new THREE.Group();
             floatingTextsGroup = new THREE.Group();
+            cometsGroup = new THREE.Group();
 
             createRedSphereCore();
             createWhiteParticlesAround();
             createOrbitingPhotoCards();
             createFloatingTexts();
+            createComets();
 
             scene.add(photoCardsGroup);
             scene.add(floatingTextsGroup);
+            scene.add(cometsGroup);
 
             updateCameraPosition();
             animate();
@@ -273,8 +441,7 @@
 
         function createGlowParticleTexture() {
             const canvas = document.createElement('canvas');
-            canvas.width = 64;
-            canvas.height = 64;
+            canvas.width = 64; canvas.height = 64;
             const ctx = canvas.getContext('2d');
             const gradient = ctx.createRadialGradient(32, 32, 0, 32, 32, 32);
             gradient.addColorStop(0, 'rgba(255, 255, 255, 1)');
@@ -288,15 +455,14 @@
         }
 
         function createRedSphereCore() {
-            const particleCount = 20000;
+            const particleCount = 25000;
             const geometry = new THREE.BufferGeometry();
             const positions = new Float32Array(particleCount * 3);
             const colors = new Float32Array(particleCount * 3);
             const radius = 7.5;
 
             for (let i = 0; i < particleCount; i++) {
-                const u = Math.random();
-                const v = Math.random();
+                const u = Math.random(), v = Math.random();
                 const theta = u * 2.0 * Math.PI;
                 const phi = Math.acos(2.0 * v - 1.0);
                 const r = radius * Math.cbrt(Math.random());
@@ -314,12 +480,9 @@
             geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
 
             const material = new THREE.PointsMaterial({
-                size: 0.12,
-                vertexColors: true,
+                size: 0.14, vertexColors: true,
                 map: createGlowParticleTexture(),
-                transparent: true,
-                blending: THREE.AdditiveBlending,
-                depthWrite: false
+                transparent: true, blending: THREE.AdditiveBlending, depthWrite: false
             });
 
             redSphereMesh = new THREE.Points(geometry, material);
@@ -331,58 +494,116 @@
             const ringGeo = new THREE.BufferGeometry();
             const ringPos = new Float32Array(ringCount * 3);
 
-            const innerRadius = 12.0;
-            const outerRadius = 36.0;
-
             for (let i = 0; i < ringCount; i++) {
-                const r = innerRadius + Math.random() * (outerRadius - innerRadius);
+                const r = 12.0 + Math.random() * 24.0;
                 const theta = Math.random() * Math.PI * 2;
-
                 ringPos[i * 3] = r * Math.cos(theta);
                 ringPos[i * 3 + 1] = (Math.random() - 0.5) * 2.5;
                 ringPos[i * 3 + 2] = r * Math.sin(theta);
             }
-
             ringGeo.setAttribute('position', new THREE.BufferAttribute(ringPos, 3));
 
             const ringMat = new THREE.PointsMaterial({
-                size: 0.14,
-                color: 0xffffff,
+                size: 0.14, color: 0xffffff,
                 map: createGlowParticleTexture(),
-                transparent: true,
-                opacity: 1.0,
-                blending: THREE.AdditiveBlending,
-                depthWrite: false
+                transparent: true, opacity: 1.0,
+                blending: THREE.AdditiveBlending, depthWrite: false
             });
 
             saturnRingMesh = new THREE.Points(ringGeo, ringMat);
             saturnRingMesh.rotation.x = 0.3;
             scene.add(saturnRingMesh);
 
-            const starCount = 10000;
-            const starGeo = new THREE.BufferGeometry();
-            const starPos = new Float32Array(starCount * 3);
-
-            for (let i = 0; i < starCount; i++) {
-                starPos[i * 3] = (Math.random() - 0.5) * 350;
-                starPos[i * 3 + 1] = (Math.random() - 0.5) * 350;
-                starPos[i * 3 + 2] = (Math.random() - 0.5) * 350;
+            for (let layer = 0; layer < 3; layer++) {
+                const starCount = 3000;
+                const starGeo = new THREE.BufferGeometry();
+                const starPos = new Float32Array(starCount * 3);
+                const spread = 250 + layer * 100;
+                for (let i = 0; i < starCount; i++) {
+                    starPos[i * 3] = (Math.random() - 0.5) * spread * 2;
+                    starPos[i * 3 + 1] = (Math.random() - 0.5) * spread * 2;
+                    starPos[i * 3 + 2] = (Math.random() - 0.5) * spread * 2;
+                }
+                starGeo.setAttribute('position', new THREE.BufferAttribute(starPos, 3));
+                const starMat = new THREE.PointsMaterial({
+                    size: 0.08 + layer * 0.03, color: 0xffffff,
+                    map: createGlowParticleTexture(),
+                    transparent: true, opacity: 0.5 + layer * 0.15,
+                    blending: THREE.AdditiveBlending, depthWrite: false
+                });
+                const starMesh = new THREE.Points(starGeo, starMat);
+                scene.add(starMesh);
+                starLayers.push({ mesh: starMesh, parallaxFactor: (layer + 1) * 0.15 });
             }
 
+            const starCount = 8000;
+            const starGeo = new THREE.BufferGeometry();
+            const starPos = new Float32Array(starCount * 3);
+            for (let i = 0; i < starCount; i++) {
+                starPos[i * 3] = (Math.random() - 0.5) * 400;
+                starPos[i * 3 + 1] = (Math.random() - 0.5) * 400;
+                starPos[i * 3 + 2] = (Math.random() - 0.5) * 400;
+            }
             starGeo.setAttribute('position', new THREE.BufferAttribute(starPos, 3));
-
             const starMat = new THREE.PointsMaterial({
-                size: 0.09,
-                color: 0xffffff,
+                size: 0.1, color: 0xffffff,
                 map: createGlowParticleTexture(),
-                transparent: true,
-                opacity: 0.8,
-                blending: THREE.AdditiveBlending,
-                depthWrite: false
+                transparent: true, opacity: 0.7,
+                blending: THREE.AdditiveBlending, depthWrite: false
             });
-
             starfieldMesh = new THREE.Points(starGeo, starMat);
             scene.add(starfieldMesh);
+        }
+
+        function createComets() {
+            for (let i = 0; i < 5; i++) {
+                const comet = createSingleComet();
+                cometsGroup.add(comet);
+                comets.push(comet);
+            }
+        }
+
+        function createSingleComet() {
+            const group = new THREE.Group();
+
+            const headGeo = new THREE.SphereGeometry(0.5, 8, 8);
+            const headMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
+            group.add(new THREE.Mesh(headGeo, headMat));
+
+            const tailCount = 60;
+            const tailGeo = new THREE.BufferGeometry();
+            const tailPos = new Float32Array(tailCount * 3);
+            const tailColors = new Float32Array(tailCount * 3);
+
+            for (let i = 0; i < tailCount; i++) {
+                const t = i / tailCount;
+                tailPos[i * 3] = -t * 8;
+                tailPos[i * 3 + 1] = (Math.random() - 0.5) * t * 1.5;
+                tailPos[i * 3 + 2] = (Math.random() - 0.5) * t * 1.5;
+                tailColors[i * 3] = 1.0;
+                tailColors[i * 3 + 1] = 0.5 + Math.random() * 0.5;
+                tailColors[i * 3 + 2] = 0.7 + Math.random() * 0.3;
+            }
+            tailGeo.setAttribute('position', new THREE.BufferAttribute(tailPos, 3));
+            tailGeo.setAttribute('color', new THREE.BufferAttribute(tailColors, 3));
+            const tailMat = new THREE.PointsMaterial({
+                size: 0.4, vertexColors: true,
+                map: createGlowParticleTexture(),
+                transparent: true, opacity: 0.8,
+                blending: THREE.AdditiveBlending, depthWrite: false
+            });
+            group.add(new THREE.Points(tailGeo, tailMat));
+
+            const angle = Math.random() * Math.PI * 2;
+            const radius = 80 + Math.random() * 60;
+            const height = (Math.random() - 0.5) * 60;
+            group.position.set(radius * Math.cos(angle), height, radius * Math.sin(angle));
+
+            group.userData = {
+                angle, radius, height,
+                speed: 0.001 + Math.random() * 0.002
+            };
+            return group;
         }
 
         function createOrbitingPhotoCards() {
@@ -407,8 +628,21 @@
                     const cardMat = new THREE.MeshBasicMaterial({ map: tex, side: THREE.DoubleSide });
                     const cardMesh = new THREE.Mesh(cardGeo, cardMat);
                     cardMesh.position.set(x, y, z);
-                    cardMesh.userData = { url: photo.url, caption: photo.caption, angle: angle, radius: orbitRadius, yBase: y };
+                    cardMesh.userData = {
+                        url: photo.url,
+                        caption: photo.caption,
+                        sub: photo.sub || '',
+                        index: i,
+                        angle: angle,
+                        radius: orbitRadius,
+                        yBase: y
+                    };
+                    cardMesh.scale.set(0.01, 0.01, 0.01);
                     photoCardsGroup.add(cardMesh);
+
+                    setTimeout(() => {
+                        gsap.to(cardMesh.scale, { x: 1, y: 1, z: 1, duration: 1.2, ease: 'elastic.out(1, 0.5)' });
+                    }, i * 100);
                 };
 
                 textureLoader.load(photo.url, makeCard, undefined, () => {
@@ -419,13 +653,10 @@
 
         function createPhotoTextureFallback(text) {
             const canvas = document.createElement('canvas');
-            canvas.width = 512;
-            canvas.height = 340;
+            canvas.width = 512; canvas.height = 340;
             const ctx = canvas.getContext('2d');
-            ctx.fillStyle = '#100515';
-            ctx.fillRect(0, 0, 512, 340);
-            ctx.strokeStyle = '#ff2a5f';
-            ctx.lineWidth = 6;
+            ctx.fillStyle = '#100515'; ctx.fillRect(0, 0, 512, 340);
+            ctx.strokeStyle = '#ff2a5f'; ctx.lineWidth = 6;
             ctx.strokeRect(10, 10, 492, 320);
             ctx.fillStyle = '#ffffff';
             ctx.font = '28px Montserrat';
@@ -442,8 +673,7 @@
 
             phrases.forEach((phrase, idx) => {
                 const canvas = document.createElement('canvas');
-                canvas.width = 512;
-                canvas.height = 128;
+                canvas.width = 512; canvas.height = 128;
                 const ctx = canvas.getContext('2d');
                 ctx.fillStyle = 'rgba(0,0,0,0)';
                 ctx.fillRect(0, 0, 512, 128);
@@ -451,7 +681,7 @@
                 ctx.fillStyle = '#ffffff';
                 ctx.textAlign = 'center';
                 ctx.shadowColor = '#ff2a5f';
-                ctx.shadowBlur = 12;
+                ctx.shadowBlur = 15;
                 ctx.fillText(phrase, 256, 70);
 
                 const tex = new THREE.CanvasTexture(canvas);
@@ -462,7 +692,7 @@
                 const angle = (idx / phrases.length) * Math.PI * 2;
                 const r = 28;
                 mesh.position.set(r * Math.cos(angle), (Math.random() - 0.5) * 8, r * Math.sin(angle));
-                mesh.userData = { angle: angle, r: r, speed: 0.002 };
+                mesh.userData = { angle, r, speed: 0.002 };
                 floatingTextsGroup.add(mesh);
             });
         }
@@ -474,20 +704,20 @@
             canvas.height = window.innerHeight;
 
             const particles = [];
-            const count = 400;
+            const count = 500;
             const cx = canvas.width / 2;
             const cy = canvas.height / 2;
 
             for (let i = 0; i < count; i++) {
                 const angle = Math.random() * Math.PI * 2;
-                const speed = Math.random() * 12 + 2;
+                const speed = Math.random() * 15 + 3;
                 particles.push({
                     x: cx, y: cy,
-                    vx: Math.cos(angle) * speed,
-                    vy: Math.sin(angle) * speed,
-                    radius: Math.random() * 3 + 1,
+                    vx: Math.cos(angle) * speed, vy: Math.sin(angle) * speed,
+                    radius: Math.random() * 4 + 1,
                     alpha: 1,
-                    color: Math.random() > 0.5 ? '#ffffff' : '#ff2a5f'
+                    color: Math.random() > 0.4 ? '#ffffff' : '#ff2a5f',
+                    decay: 0.008 + Math.random() * 0.015
                 });
             }
 
@@ -495,14 +725,16 @@
                 ctx.clearRect(0, 0, canvas.width, canvas.height);
                 let alive = false;
                 particles.forEach(p => {
-                    p.x += p.vx;
-                    p.y += p.vy;
-                    p.alpha -= 0.015;
+                    p.x += p.vx; p.y += p.vy;
+                    p.vx *= 0.98; p.vy *= 0.98;
+                    p.alpha -= p.decay;
                     if (p.alpha > 0) {
                         alive = true;
                         ctx.save();
                         ctx.globalAlpha = p.alpha;
                         ctx.fillStyle = p.color;
+                        ctx.shadowBlur = 15;
+                        ctx.shadowColor = p.color;
                         ctx.beginPath();
                         ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
                         ctx.fill();
@@ -518,28 +750,47 @@
             camTheta += (camTargetTheta - camTheta) * 0.08;
             camPhi += (camTargetPhi - camPhi) * 0.08;
             camRadius += (camTargetRadius - camRadius) * 0.08;
-
             camPhi = Math.max(0.1, Math.min(Math.PI - 0.1, camPhi));
 
             const x = camRadius * Math.sin(camPhi) * Math.cos(camTheta);
             const y = camRadius * Math.cos(camPhi);
             const z = camRadius * Math.sin(camPhi) * Math.sin(camTheta);
-
             camera.position.set(x, y, z);
             camera.lookAt(0, 0, 0);
         }
 
         function animate() {
             requestAnimationFrame(animate);
-
             const time = Date.now() * 0.001;
 
-            if (redSphereMesh) redSphereMesh.rotation.y = time * 0.05;
+            if (redSphereMesh) {
+                redSphereMesh.rotation.y = time * 0.05;
+                const pulse = 1 + Math.sin(time * 1.5) * 0.02;
+                redSphereMesh.scale.set(pulse, pulse, pulse);
+            }
             if (saturnRingMesh) {
                 saturnRingMesh.rotation.y = time * 0.02;
                 saturnRingMesh.material.opacity = 0.85 + Math.sin(time * 1.5) * 0.15;
             }
             if (starfieldMesh) starfieldMesh.rotation.y = time * 0.003;
+
+            starLayers.forEach((layer, idx) => {
+                layer.mesh.rotation.y += 0.0002 * (idx + 1);
+                layer.mesh.position.x += (mouseNormX * layer.parallaxFactor - layer.mesh.position.x) * 0.02;
+                layer.mesh.position.y += (mouseNormY * layer.parallaxFactor - layer.mesh.position.y) * 0.02;
+            });
+
+            comets.forEach(comet => {
+                comet.userData.angle += comet.userData.speed;
+                comet.position.x = comet.userData.radius * Math.cos(comet.userData.angle);
+                comet.position.z = comet.userData.radius * Math.sin(comet.userData.angle);
+                comet.position.y = comet.userData.height + Math.sin(time + comet.userData.angle * 5) * 3;
+                comet.lookAt(
+                    comet.userData.radius * Math.cos(comet.userData.angle + 0.1),
+                    comet.position.y,
+                    comet.userData.radius * Math.sin(comet.userData.angle + 0.1)
+                );
+            });
 
             photoCardsGroup.children.forEach(card => {
                 card.userData.angle += 0.002;
@@ -560,8 +811,9 @@
             renderer.render(scene, camera);
         }
 
+        // ═══════════════ УПРАВЛЕНИЕ ═══════════════
         function onMouseDown(e) {
-            if (!experienceStarted) return;
+            if (!experienceStarted || isLightboxOpen) return;
             if (e.target.closest('button') || e.target.closest('#settings-drawer') || e.target.closest('#core-modal') || e.target.closest('#photo-lightbox')) return;
             isDragging = true;
             prevMouseX = e.clientX;
@@ -569,12 +821,13 @@
         }
 
         function onMouseMove(e) {
+            mouseNormX = (e.clientX / window.innerWidth) * 2 - 1;
+            mouseNormY = -(e.clientY / window.innerHeight) * 2 + 1;
             if (!isDragging) return;
             const dx = e.clientX - prevMouseX;
             const dy = e.clientY - prevMouseY;
             prevMouseX = e.clientX;
             prevMouseY = e.clientY;
-
             camTargetTheta -= dx * 0.005;
             camTargetPhi -= dy * 0.005;
         }
@@ -582,13 +835,13 @@
         function onMouseUp() { isDragging = false; }
 
         function onWheel(e) {
-            if (!experienceStarted) return;
+            if (!experienceStarted || isLightboxOpen) return;
             camTargetRadius += e.deltaY * 0.05;
             camTargetRadius = Math.max(3, Math.min(200, camTargetRadius));
         }
 
         function onTouchStart(e) {
-            if (!experienceStarted) return;
+            if (!experienceStarted || isLightboxOpen) return;
             if (e.target.closest('button') || e.target.closest('#settings-drawer') || e.target.closest('#core-modal') || e.target.closest('#photo-lightbox')) return;
             if (e.touches.length === 1) {
                 isDragging = true;
@@ -603,46 +856,107 @@
             const dy = e.touches[0].clientY - prevMouseY;
             prevMouseX = e.touches[0].clientX;
             prevMouseY = e.touches[0].clientY;
-
             camTargetTheta -= dx * 0.008;
             camTargetPhi -= dy * 0.008;
         }
 
         function onTouchEnd() { isDragging = false; }
 
+        // ═══════════════ КЛИК ПО ФОТО / ЯДРУ ═══════════════
         function onPointerDown(e) {
-            if (!experienceStarted) return;
+            if (!experienceStarted || isLightboxOpen) return;
             if (e.target.closest('button') || e.target.closest('#settings-drawer') || e.target.closest('#core-modal') || e.target.closest('#photo-lightbox')) return;
 
             mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
             mouse.y = -(e.clientY / window.innerHeight) * 2 + 1;
-
             raycaster.setFromCamera(mouse, camera);
 
             const intersectsPhotos = raycaster.intersectObjects(photoCardsGroup.children);
             if (intersectsPhotos.length > 0) {
-                const data = intersectsPhotos[0].object.userData;
-                const lightbox = document.getElementById('photo-lightbox');
-                document.getElementById('lightbox-img').src = data.url;
-                document.getElementById('lightbox-caption').innerText = data.caption || 'Лерочка';
-                lightbox.classList.remove('opacity-0', 'pointer-events-none');
+                const idx = intersectsPhotos[0].object.userData.index;
+                openLightbox(idx);
                 return;
             }
 
             if (redSphereMesh) {
                 const intersectsCore = raycaster.intersectObject(redSphereMesh);
-                if (intersectsCore.length > 0) {
-                    zoomToCoreAndOpenModal();
-                }
+                if (intersectsCore.length > 0) zoomToCoreAndOpenModal();
             }
         }
 
-        // ============ СТАРТ ОПЫТА ============
+        // ═══════════════ ЛАЙТБОКС ═══════════════
+        function openLightbox(index) {
+            currentLbIndex = index;
+            isLightboxOpen = true;
+            updateLightbox();
+            buildThumbs();
+            document.getElementById('photo-lightbox').classList.remove('modal-hidden');
+        }
+
+        function closeLightbox() {
+            isLightboxOpen = false;
+            document.getElementById('photo-lightbox').classList.add('modal-hidden');
+        }
+
+        function updateLightbox() {
+            const photo = customPhotos[currentLbIndex];
+            if (!photo) return;
+
+            const img = document.getElementById('lightbox-img');
+            img.style.animation = 'none';
+            void img.offsetWidth; // reflow для перезапуска анимации
+            img.style.animation = '';
+            img.src = photo.url;
+
+            document.getElementById('lightbox-caption').innerText = photo.caption || '';
+            document.getElementById('lightbox-subcaption').innerText = photo.sub || '';
+            document.getElementById('lb-counter').innerText = `${currentLbIndex + 1} / ${customPhotos.length}`;
+
+            // Подсветка активной миниатюры
+            document.querySelectorAll('.lb-thumb').forEach((t, i) => {
+                t.classList.toggle('active', i === currentLbIndex);
+            });
+
+            // Прокрутка к активной миниатюре
+            const activeThumb = document.querySelectorAll('.lb-thumb')[currentLbIndex];
+            if (activeThumb) {
+                activeThumb.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+            }
+        }
+
+        function nextPhoto() {
+            currentLbIndex = (currentLbIndex + 1) % customPhotos.length;
+            updateLightbox();
+        }
+
+        function prevPhoto() {
+            currentLbIndex = (currentLbIndex - 1 + customPhotos.length) % customPhotos.length;
+            updateLightbox();
+        }
+
+        function buildThumbs() {
+            const container = document.getElementById('lb-thumbs');
+            container.innerHTML = '';
+            customPhotos.forEach((photo, i) => {
+                const thumb = document.createElement('img');
+                thumb.src = photo.url;
+                thumb.className = 'lb-thumb';
+                thumb.alt = photo.caption || '';
+                if (i === currentLbIndex) thumb.classList.add('active');
+                thumb.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    currentLbIndex = i;
+                    updateLightbox();
+                });
+                container.appendChild(thumb);
+            });
+        }
+
+        // ═══════════════ СТАРТ ═══════════════
         function startExperience() {
             if (experienceStarted) return;
             experienceStarted = true;
 
-            // 🎵 Фоновая музыка — на 100% громкости
             bgMusicEl = document.getElementById('bg-music');
             bgMusicEl.volume = 1.0;
             bgMusicEl.play().catch(err => console.log('Фон не запустился:', err));
@@ -652,28 +966,12 @@
             const introOverlay = document.getElementById('intro-overlay');
             const mainUI = document.getElementById('main-ui');
 
-            gsap.to(introOverlay, {
-                opacity: 0,
-                duration: 1,
-                onComplete: () => { introOverlay.style.display = 'none'; }
-            });
-
+            gsap.to(introOverlay, { opacity: 0, duration: 1, onComplete: () => { introOverlay.style.display = 'none'; } });
             gsap.to(mainUI, { opacity: 1, duration: 1, delay: 0.5 });
         }
 
-        // ============ ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ МУЗЫКИ ============
-        function pauseBgMusic() {
-            if (bgMusicEl && !bgMusicEl.paused) {
-                bgMusicEl.pause();
-            }
-        }
-
-        function resumeBgMusic() {
-            // Возобновляем фон только если он не выключен вручную кнопкой
-            if (bgMusicEl && !bgMuted) {
-                bgMusicEl.play().catch(() => {});
-            }
-        }
+        function pauseBgMusic() { if (bgMusicEl && !bgMusicEl.paused) bgMusicEl.pause(); }
+        function resumeBgMusic() { if (bgMusicEl && !bgMuted) bgMusicEl.play().catch(() => {}); }
 
         window.addEventListener('DOMContentLoaded', () => {
             try {
@@ -685,57 +983,79 @@
                 el.textContent = 'Ошибка инициализации 3D: ' + err.message;
             }
 
+            setTimeout(() => {
+                const preloader = document.getElementById('preloader');
+                if (preloader) {
+                    gsap.to(preloader, { opacity: 0, duration: 1, onComplete: () => preloader.style.display = 'none' });
+                }
+            }, 1500);
+
             const startBtn = document.getElementById('start-btn');
             const introOverlay = document.getElementById('intro-overlay');
 
-            startBtn.addEventListener('click', (e) => {
-                e.stopPropagation();
-                e.preventDefault();
-                startExperience();
-            });
-
-            introOverlay.addEventListener('click', (e) => {
-                e.stopPropagation();
-                startExperience();
-            });
+            startBtn.addEventListener('click', (e) => { e.stopPropagation(); e.preventDefault(); startExperience(); });
+            introOverlay.addEventListener('click', (e) => { e.stopPropagation(); startExperience(); });
 
             document.getElementById('focus-core-btn').addEventListener('click', zoomToCoreAndOpenModal);
             document.getElementById('toggle-audio-btn').addEventListener('click', zoomToCoreAndOpenModal);
             document.getElementById('close-modal-btn').addEventListener('click', closeModal);
 
-            // Кнопка вкл/выкл фоновой музыки
             document.getElementById('toggle-bg-btn').addEventListener('click', () => {
                 if (!bgMusicEl) return;
                 bgMuted = !bgMuted;
-                if (bgMuted) {
-                    bgMusicEl.pause();
-                } else {
-                    // Если спецтрек сейчас играет — не включаем фон
-                    if (!isAudioPlaying) {
-                        bgMusicEl.play().catch(() => {});
-                    }
-                }
+                if (bgMuted) bgMusicEl.pause();
+                else if (!isAudioPlaying) bgMusicEl.play().catch(() => {});
                 const icon = document.querySelector('#toggle-bg-btn i');
                 icon.className = bgMuted ? 'fas fa-volume-xmark text-lg' : 'fas fa-volume-high text-lg';
+            });
+
+            // Открыть слайд-шоу (начиная с первого фото)
+            document.getElementById('open-slideshow-btn').addEventListener('click', () => openLightbox(0));
+
+            // Лайтбокс
+            document.getElementById('close-lightbox-btn').addEventListener('click', closeLightbox);
+            document.getElementById('lb-next').addEventListener('click', (e) => { e.stopPropagation(); nextPhoto(); });
+            document.getElementById('lb-prev').addEventListener('click', (e) => { e.stopPropagation(); prevPhoto(); });
+
+            // Клик по фону лайтбокса — закрыть
+            document.getElementById('photo-lightbox').addEventListener('click', (e) => {
+                if (e.target.id === 'photo-lightbox') closeLightbox();
+            });
+
+            // Клавиатура
+            document.addEventListener('keydown', (e) => {
+                if (!isLightboxOpen) return;
+                if (e.key === 'Escape') closeLightbox();
+                if (e.key === 'ArrowRight') nextPhoto();
+                if (e.key === 'ArrowLeft') prevPhoto();
+            });
+
+            // Свайпы в лайтбоксе (touch)
+            let touchStartX = 0;
+            const lb = document.getElementById('photo-lightbox');
+            lb.addEventListener('touchstart', (e) => {
+                if (e.touches.length === 1) touchStartX = e.touches[0].clientX;
+            }, { passive: true });
+            lb.addEventListener('touchend', (e) => {
+                if (e.changedTouches.length !== 1) return;
+                const dx = e.changedTouches[0].clientX - touchStartX;
+                if (Math.abs(dx) > 50) {
+                    if (dx < 0) nextPhoto();
+                    else prevPhoto();
+                }
             });
 
             const drawer = document.getElementById('settings-drawer');
             document.getElementById('open-gallery-btn').addEventListener('click', () => drawer.classList.remove('translate-x-full'));
             document.getElementById('close-drawer-btn').addEventListener('click', () => drawer.classList.add('translate-x-full'));
 
-            document.getElementById('close-lightbox-btn').addEventListener('click', () => {
-                document.getElementById('photo-lightbox').classList.add('opacity-0', 'pointer-events-none');
-            });
-
             window.addEventListener('mousedown', onMouseDown);
             window.addEventListener('mousemove', onMouseMove);
             window.addEventListener('mouseup', onMouseUp);
             window.addEventListener('wheel', onWheel, { passive: true });
-
             window.addEventListener('touchstart', onTouchStart, { passive: true });
             window.addEventListener('touchmove', onTouchMove, { passive: true });
             window.addEventListener('touchend', onTouchEnd);
-
             window.addEventListener('click', onPointerDown);
             window.addEventListener('resize', onWindowResize);
         });
@@ -744,17 +1064,14 @@
             camTargetRadius = 16;
             camTargetPhi = Math.PI / 2;
             camTargetTheta = Math.PI / 2;
-
             setTimeout(() => {
-                const modal = document.getElementById('core-modal');
-                modal.classList.remove('opacity-0', 'pointer-events-none');
+                document.getElementById('core-modal').classList.remove('modal-hidden');
                 initAudio();
             }, 1800);
         }
 
         function closeModal() {
-            const modal = document.getElementById('core-modal');
-            modal.classList.add('opacity-0', 'pointer-events-none');
+            document.getElementById('core-modal').classList.add('modal-hidden');
             camTargetRadius = 50;
             camTargetPhi = Math.PI / 3;
         }
@@ -767,8 +1084,9 @@
                 div.className = 'space-y-1 text-xs';
                 div.innerHTML = `
                     <label class="text-gray-400">Фото ${idx + 1}</label>
-                    <input type="text" value="${photo.url}" data-idx="${idx}" class="photo-url-input w-full bg-black/40 border border-white/10 rounded px-2 py-1 text-white text-xs">
-                    <input type="text" value="${photo.caption}" data-idx="${idx}" class="photo-cap-input w-full bg-black/40 border border-white/10 rounded px-2 py-1 text-pink-300 text-xs" placeholder="Подпись">
+                    <input type="text" value="${photo.url}" data-idx="${idx}" class="photo-url-input w-full bg-black/40 border border-white/10 rounded px-2 py-1 text-white text-xs focus:border-pink-500 outline-none transition-colors">
+                    <input type="text" value="${photo.caption}" data-idx="${idx}" class="photo-cap-input w-full bg-black/40 border border-white/10 rounded px-2 py-1 text-pink-300 text-xs focus:border-pink-500 outline-none transition-colors" placeholder="Подпись">
+                    <input type="text" value="${photo.sub || ''}" data-idx="${idx}" class="photo-sub-input w-full bg-black/40 border border-white/10 rounded px-2 py-1 text-gray-400 text-xs focus:border-pink-500 outline-none transition-colors" placeholder="Подзаголовок (опционально)">
                 `;
                 container.appendChild(div);
             });
@@ -776,12 +1094,14 @@
             document.getElementById('save-photos-btn').addEventListener('click', () => {
                 const urlInputs = document.querySelectorAll('.photo-url-input');
                 const capInputs = document.querySelectorAll('.photo-cap-input');
+                const subInputs = document.querySelectorAll('.photo-sub-input');
                 const newPhotos = [];
 
                 urlInputs.forEach((inp, i) => {
                     newPhotos.push({
                         url: inp.value.trim() || DEFAULT_PHOTOS[i].url,
-                        caption: capInputs[i].value.trim() || ''
+                        caption: capInputs[i].value.trim() || '',
+                        sub: subInputs[i].value.trim() || ''
                     });
                 });
 
@@ -792,7 +1112,6 @@
             });
         }
 
-        // ============ АУДИО ПЛЕЕР (СПЕЦТРЕК) ============
         function initAudio() {
             if (audioCtx) return;
             try {
@@ -803,7 +1122,6 @@
                 const playBtn = document.getElementById('play-pause-btn');
                 const audioEl = new Audio(SPECIAL_MUSIC_SRC);
                 audioEl.crossOrigin = "anonymous";
-                specialAudioEl = audioEl;
 
                 audioSource = audioCtx.createMediaElementSource(audioEl);
                 audioSource.connect(audioAnalyser);
@@ -812,17 +1130,12 @@
                 playBtn.addEventListener('click', () => {
                     if (audioCtx.state === 'suspended') audioCtx.resume();
                     if (isAudioPlaying) {
-                        // ⏸ Ставим спецтрек на паузу → возвращаем фон
                         audioEl.pause();
                         playBtn.innerHTML = '<i class="fas fa-play ml-1"></i>';
                         isAudioPlaying = false;
-
-                        // Возвращаем фоновую музыку (если она не отключена кнопкой)
                         resumeBgMusic();
                     } else {
-                        // ▶ Запускаем спецтрек → глушим фон
                         pauseBgMusic();
-
                         audioEl.play().then(() => {
                             playBtn.innerHTML = '<i class="fas fa-pause"></i>';
                             isAudioPlaying = true;
@@ -830,7 +1143,6 @@
                     }
                 });
 
-                // Если спецтрек закончился сам — возвращаем фон
                 audioEl.addEventListener('ended', () => {
                     playBtn.innerHTML = '<i class="fas fa-play ml-1"></i>';
                     isAudioPlaying = false;
@@ -844,7 +1156,6 @@
                     document.getElementById('dur-time').innerText = formatTime(audioEl.duration);
                 });
 
-                // Перемотка
                 document.getElementById('seek-bar').addEventListener('input', (e) => {
                     if (!audioEl.duration) return;
                     audioEl.currentTime = (e.target.value / 100) * audioEl.duration;
@@ -863,8 +1174,9 @@
         function renderVisualizer() {
             const canvas = document.getElementById('audio-visualizer');
             const ctx = canvas.getContext('2d');
-            canvas.width = canvas.clientWidth;
-            canvas.height = canvas.clientHeight;
+            canvas.width = canvas.clientWidth * 2;
+            canvas.height = canvas.clientHeight * 2;
+            ctx.scale(2, 2);
 
             const bufferLength = audioAnalyser.frequencyBinCount;
             const dataArray = new Uint8Array(bufferLength);
@@ -874,14 +1186,22 @@
                 if (!audioAnalyser) return;
                 audioAnalyser.getByteFrequencyData(dataArray);
 
-                ctx.clearRect(0, 0, canvas.width, canvas.height);
-                const barWidth = (canvas.width / bufferLength) * 2;
+                const w = canvas.width / 2;
+                const h = canvas.height / 2;
+
+                ctx.clearRect(0, 0, w, h);
+                const barWidth = (w / bufferLength) * 2;
                 let x = 0;
 
                 for (let i = 0; i < bufferLength; i++) {
-                    const barHeight = (dataArray[i] / 255) * canvas.height;
-                    ctx.fillStyle = `rgba(255, 42, 95, ${dataArray[i] / 255 + 0.2})`;
-                    ctx.fillRect(x, canvas.height - barHeight, barWidth - 2, barHeight);
+                    const barHeight = (dataArray[i] / 255) * h;
+                    const gradient = ctx.createLinearGradient(0, h - barHeight, 0, h);
+                    gradient.addColorStop(0, '#ff2a5f');
+                    gradient.addColorStop(1, '#ffaacc');
+                    ctx.fillStyle = gradient;
+                    ctx.shadowBlur = 10;
+                    ctx.shadowColor = '#ff2a5f';
+                    ctx.fillRect(x, h - barHeight, barWidth - 2, barHeight);
                     x += barWidth;
                 }
             }
